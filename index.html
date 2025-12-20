@@ -471,31 +471,31 @@
                     return null;
                 }
                 
-                // Write HTML content to popup
-                popupWindow.document.write(`
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style>
-                            body {
-                                margin: 0;
-                                padding: 0;
-                                overflow: hidden;
-                                background: black;
-                            }
-                            video {
-                                width: 100%;
-                                height: 100%;
-                                object-fit: cover;
-                            }
-                            #pause-overlay {
-                                position: fixed;
-                                top: 0;
-                                left: 0;
-                                width: 100%;
-                                height: 100%;
-                                background: rgba(0, 0, 0, 0.85);
-                                display: none;
+                // In the popup HTML generation, update the video initialization:
+            popupWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden;
+                            background: black;
+                        }
+                        video {
+                            width: 100%;
+                            height: 100%;
+                            object-fit: cover;
+                        }
+                        #pause-overlay {
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: rgba(0, 0, 0, 0.85);
+                            display: none;
                                 justify-content: center;
                                 align-items: center;
                                 z-index: 1000;
@@ -515,7 +515,7 @@
                             <h1>PAUSED</h1>
                             <p>This popup has been paused by Ctrl+Shift+P</p>
                         </div>
-                        <video id="popup-video" autoplay loop muted playsinline>
+                        <video id="popup-video" autoplay loop playsinline>
                             <source src="video.mp4" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
@@ -528,14 +528,16 @@
                                 video = document.getElementById('popup-video');
                                 const pauseOverlay = document.getElementById('pause-overlay');
                                 
-                                // Try to play video
-                                if (video) {
-                                    video.play().catch(e => {
-                                        console.log("Video autoplay prevented:", e);
-                                        video.muted = true;
-                                        video.play();
-                                    });
-                                }
+                                // Try to play video with sound first
+                                video.muted = false;
+                                video.play().then(() => {
+                                    console.log("Popup video playing with sound");
+                                }).catch(error => {
+                                    console.log("Popup video sound blocked, playing muted:", error);
+                                    // Fallback to muted
+                                    video.muted = true;
+                                    video.play();
+                                });
                                 
                                 // Keyboard shortcut handler for Ctrl+Shift+P
                                 document.addEventListener('keydown', function(e) {
@@ -608,10 +610,10 @@
                 `);
                 popupWindow.document.close();
                 
-                // Random velocity for movement - INCREASED BY 3X
+                // Random velocity for movement
                 const velocity = {
-                    x: (Math.random() - 0.5) * 12, // Changed from 4 to 12
-                    y: (Math.random() - 0.5) * 12  // Changed from 4 to 12
+                    x: (Math.random() - 0.5) * 20,
+                    y: (Math.random() - 0.5) * 20
                 };
                 
                 const popupData = {
