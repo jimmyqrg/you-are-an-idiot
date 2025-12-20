@@ -239,6 +239,31 @@
         // Start the experience
         startButton.addEventListener('click', startExperience);
         
+        function startExperience() {
+            if (isStarted) return;
+            
+            isStarted = true;
+            
+            // Hide start menu
+            startMenu.style.display = 'none';
+            
+            // Play background video
+            backgroundVideo.play();
+            
+            // Create initial popups (10 to start)
+            createBrowserPopups(10);
+            
+            // Start popup animation
+            startPopupAnimation();
+            
+            // Set up interval to create more popups periodically
+            intervalId = setInterval(() => {
+                if (!isPaused) {
+                    createBrowserPopups(3);
+                }
+            }, 10000);
+        }
+        
         function createBrowserPopup() {
           if (isPaused) return null;
           
@@ -460,10 +485,10 @@
                 `);
                 popupWindow.document.close();
                 
-                // Random velocity for movement
+                // Random velocity for movement - INCREASED BY 3X
                 const velocity = {
-                    x: (Math.random() - 0.5) * 4,
-                    y: (Math.random() - 0.5) * 4
+                    x: (Math.random() - 0.5) * 12, // Changed from 4 to 12
+                    y: (Math.random() - 0.5) * 12  // Changed from 4 to 12
                 };
                 
                 const popupData = {
@@ -493,6 +518,7 @@
         
         // Function to be called when a popup is closed by user
         function popupClosed(popupId) {
+            // Don't create new popups when system is paused
             if (isPaused) return;
             
             // Remove from array
@@ -501,8 +527,11 @@
                 popups.splice(index, 1);
             }
             
-            // Create 6 new popups when one is closed
-            createBrowserPopups(6);
+            // Only create new popups if system is active (not paused)
+            if (!isPaused) {
+                // Create 6 new popups when one is closed
+                createBrowserPopups(6);
+            }
             
             updatePopupCount();
         }
@@ -594,8 +623,8 @@
                     cancelAnimationFrame(animationId);
                 }
                 
-                // Force pause all popup windows
-                forcePauseAllPopups();
+                // Close all popup windows when pausing
+                closeAllPopups();
                 
                 // Show pause overlay
                 pausedOverlay.style.display = 'flex';
@@ -609,51 +638,10 @@
                 // Hide pause overlay
                 pausedOverlay.style.display = 'none';
                 
-                // Force resume all popup windows
-                forceResumeAllPopups();
-                
-                // Restart interval for creating new popups
-                intervalId = setInterval(() => {
-                    if (!isPaused) {
-                        createBrowserPopups(3);
-                    }
-                }, 10000);
-                
-                // Restart animation
-                startPopupAnimation();
-                
                 // Show start menu to allow restart
                 startMenu.style.display = 'flex';
                 isStarted = false;
             }
-        }
-        
-        // Force pause all popup windows
-        function forcePauseAllPopups() {
-            popups.forEach(popup => {
-                try {
-                    if (popup.window && !popup.window.closed) {
-                        // Call the forcePause function in the popup window
-                        popup.window.forcePause();
-                    }
-                } catch (error) {
-                    console.log("Error pausing popup:", error);
-                }
-            });
-        }
-        
-        // Force resume all popup windows
-        function forceResumeAllPopups() {
-            popups.forEach(popup => {
-                try {
-                    if (popup.window && !popup.window.closed) {
-                        // Call the forceResume function in the popup window
-                        popup.window.forceResume();
-                    }
-                } catch (error) {
-                    console.log("Error resuming popup:", error);
-                }
-            });
         }
         
         // Close all popup windows
