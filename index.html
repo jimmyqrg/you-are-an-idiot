@@ -239,33 +239,51 @@
         // Start the experience
         startButton.addEventListener('click', startExperience);
         
-        function startExperience() {
-            if (isStarted) return;
+        function createBrowserPopup() {
+          if (isPaused) return null;
+          
+          popupCounter++;
+          
+          // Calculate random position
+          const screenWidth = window.screen.availWidth;
+          const screenHeight = window.screen.availHeight;
+          const popupWidth = 400;
+          const popupHeight = 300;
+          
+          const left = Math.floor(Math.random() * (screenWidth - popupWidth));
+          const top = Math.floor(Math.random() * (screenHeight - popupHeight));
+          
+          // Create popup window
+          let popupWindow;
+          try {
+            popupWindow = window.open(
+              '', 
+              `popup-${popupCounter}`, 
+              `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=no,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+            );
             
-            isStarted = true;
-            isPaused = false;
+            // ADDED: Check if popup was blocked by the browser
+            if (!popupWindow || popupWindow.closed) {
+              console.warn("Popup was blocked by the browser");
+              
+              // Optionally show an alert to the user about enabling popups
+              if (popupCounter === 1) { // Only show this for the first blocked popup
+                alert(
+                  "Popups are being blocked by your browser.\n\n" +
+                  "To use this experience:\n" +
+                  "1. Look for a popup blocker icon in your address bar\n" +
+                  "2. Click it and select 'Always allow popups from this site'\n" +
+                  "3. Click the START button again"
+                );
+              }
+              return null;
+            }
             
-            // Hide start menu
-            startMenu.style.display = 'none';
-            
-            // Play background video
-            backgroundVideo.play();
-            
-            // Create initial 6 popup windows
-            createBrowserPopups(6);
-            
-            // Set interval to create 3 popups every 10 seconds
-            intervalId = setInterval(() => {
-                if (!isPaused) {
-                    createBrowserPopups(3);
-                }
-            }, 10000);
-            
-            // Start animation
-            startPopupAnimation();
-            
-            // Update popup count display
-            updatePopupCount();
+            // ... rest of your existing code for writing HTML to popup ...
+          } catch (error) {
+            console.error("Error creating popup:", error);
+            return null;
+          }
         }
         
         // Create specified number of browser popup windows
