@@ -367,7 +367,7 @@
           }
         }
         
-        // NEW: Start test mode function
+        // Start test mode function
         function startTestMode() {
             if (isStarted) return;
             
@@ -384,8 +384,15 @@
             modeIndicator.textContent = "Test Mode";
             modeIndicator.style.color = "#4CAF50";
             
-            // Play background video
-            backgroundVideo.play();
+            // Unmute and play background video with sound
+            backgroundVideo.muted = false;
+            backgroundVideo.play().then(() => {
+                console.log("Test Mode: Background video playing with sound");
+            }).catch(error => {
+                console.log("Test Mode: Sound blocked, falling back to muted:", error);
+                backgroundVideo.muted = true;
+                backgroundVideo.play();
+            });
             
             // Don't create any popups in test mode
             console.log("Test mode active - No popups will be created");
@@ -413,8 +420,15 @@
             modeIndicator.textContent = "Normal Mode";
             modeIndicator.style.color = "#00ccff";
             
-            // Play background video
-            backgroundVideo.play();
+            // Unmute and play background video with sound
+            backgroundVideo.muted = false;
+            backgroundVideo.play().then(() => {
+                console.log("Normal Mode: Background video playing with sound");
+            }).catch(error => {
+                console.log("Normal Mode: Sound blocked, falling back to muted:", error);
+                backgroundVideo.muted = true;
+                backgroundVideo.play();
+            });
             
             // Create initial popups (10 to start)
             createBrowserPopups(10);
