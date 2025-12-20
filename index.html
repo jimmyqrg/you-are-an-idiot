@@ -96,6 +96,9 @@
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
             letter-spacing: 1px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 300px;
         }
         
         #start-button:hover {
@@ -105,6 +108,41 @@
         
         #start-button:active {
             transform: translateY(1px);
+        }
+        
+        /* Test mode button styling */
+        #test-button {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+            width: 100%;
+            max-width: 300px;
+            margin-top: 10px;
+        }
+        
+        #test-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        #test-button:active {
+            transform: translateY(1px);
+        }
+        
+        /* Button container */
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
         }
         
         /* Control panel */
@@ -133,6 +171,22 @@
             font-weight: bold;
             color: #ff0080;
             font-size: 1.2rem;
+        }
+        
+        /* Test mode indicator */
+        #test-mode-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 500;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid #8BC34A;
         }
         
         /* Paused overlay */
@@ -181,6 +235,13 @@
                 left: 10px;
                 max-width: none;
             }
+            
+            #test-mode-indicator {
+                top: 10px;
+                left: 10px;
+                font-size: 0.9rem;
+                padding: 8px 15px;
+            }
         }
     </style>
 </head>
@@ -201,10 +262,21 @@
                 <i class="fas fa-keyboard"></i> Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> to pause everything and close all popups
             </div>
             
-            <button id="start-button">
-                <i class="fas fa-play"></i> Start
-            </button>
+            <div class="button-container">
+                <button id="start-button">
+                    <i class="fas fa-play"></i> Start
+                </button>
+                
+                <button id="test-button">
+                    <i class="fas fa-vial"></i> Test Mode (No Popups)
+                </button>
+            </div>
         </div>
+    </div>
+    
+    <!-- Test mode indicator -->
+    <div id="test-mode-indicator">
+        <i class="fas fa-vial"></i> TEST MODE ACTIVE - No Popups
     </div>
     
     <!-- Paused overlay -->
@@ -217,6 +289,7 @@
     <div id="control-panel">
         <h3><i class="fas fa-info-circle"></i> SYSTEM STATUS</h3>
         <p>Active Popups: <span id="popup-count">0</span></p>
+        <p>Mode: <span id="mode-indicator">Idle</span></p>
         <p>Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> to pause</p>
     </div>
 
@@ -228,49 +301,23 @@
         let isPaused = false;
         let isStarted = false;
         let animationId = null;
+        let isTestMode = false; // NEW: Test mode flag
         
         // DOM elements
         const startMenu = document.getElementById('start-menu');
         const startButton = document.getElementById('start-button');
+        const testButton = document.getElementById('test-button'); // NEW: Test button
+        const testModeIndicator = document.getElementById('test-mode-indicator'); // NEW: Test indicator
         const backgroundVideo = document.getElementById('background-video');
         const popupCountElement = document.getElementById('popup-count');
+        const modeIndicator = document.getElementById('mode-indicator'); // NEW: Mode indicator
         const pausedOverlay = document.getElementById('paused-overlay');
         
         // Start the experience
         startButton.addEventListener('click', startExperience);
         
-        function startExperience() {
-            if (isStarted) return;
-            
-            isStarted = true;
-            
-            // Hide start menu
-            startMenu.style.display = 'none';
-            
-            // Unmute and play background video
-            backgroundVideo.muted = false;
-            backgroundVideo.play().then(() => {
-                console.log("Background video playing with sound");
-            }).catch(error => {
-                console.log("Autoplay with sound blocked:", error);
-                // Fallback: play muted
-                backgroundVideo.muted = true;
-                backgroundVideo.play();
-            });
-            
-            // Create initial popups (10 to start)
-            createBrowserPopups(10);
-            
-            // Start popup animation
-            startPopupAnimation();
-            
-            // Set up interval to create more popups periodically
-            intervalId = setInterval(() => {
-                if (!isPaused) {
-                    createBrowserPopups(3);
-                }
-            }, 10000);
-        }
+        // NEW: Start test mode
+        testButton.addEventListener('click', startTestMode);
         
         function createBrowserPopup() {
           if (isPaused) return null;
@@ -303,10 +350,11 @@
               if (popupCounter === 1) { // Only show this for the first blocked popup
                 alert(
                   "Popups are being blocked by your browser.\n\n" +
-                  "To use this experience:\n" +
+                  "To use the full experience:\n" +
                   "1. Look for a popup blocker icon in your address bar\n" +
                   "2. Click it and select 'Always allow popups from this site'\n" +
-                  "3. Click the START button again"
+                  "3. Click the START button again\n\n" +
+                  "You can also use TEST MODE which doesn't require popups."
                 );
               }
               return null;
@@ -319,8 +367,74 @@
           }
         }
         
+        // NEW: Start test mode function
+        function startTestMode() {
+            if (isStarted) return;
+            
+            isStarted = true;
+            isTestMode = true; // Set test mode flag
+            
+            // Hide start menu
+            startMenu.style.display = 'none';
+            
+            // Show test mode indicator
+            testModeIndicator.style.display = 'block';
+            
+            // Update control panel
+            modeIndicator.textContent = "Test Mode";
+            modeIndicator.style.color = "#4CAF50";
+            
+            // Play background video
+            backgroundVideo.play();
+            
+            // Don't create any popups in test mode
+            console.log("Test mode active - No popups will be created");
+            
+            // Update popup count
+            updatePopupCount();
+            
+            // No interval needed for test mode
+        }
+        
+        // Start the full experience
+        function startExperience() {
+            if (isStarted) return;
+            
+            isStarted = true;
+            isTestMode = false; // Ensure not in test mode
+            
+            // Hide start menu
+            startMenu.style.display = 'none';
+            
+            // Hide test mode indicator if it was showing
+            testModeIndicator.style.display = 'none';
+            
+            // Update control panel
+            modeIndicator.textContent = "Normal Mode";
+            modeIndicator.style.color = "#00ccff";
+            
+            // Play background video
+            backgroundVideo.play();
+            
+            // Create initial popups (10 to start)
+            createBrowserPopups(10);
+            
+            // Start popup animation
+            startPopupAnimation();
+            
+            // Set up interval to create more popups periodically
+            intervalId = setInterval(() => {
+                if (!isPaused && !isTestMode) { // Check for test mode
+                    createBrowserPopups(3);
+                }
+            }, 10000);
+        }
+        
         // Create specified number of browser popup windows
         function createBrowserPopups(count) {
+            // Don't create popups in test mode
+            if (isTestMode) return;
+            
             for (let i = 0; i < count; i++) {
                 createBrowserPopup();
             }
@@ -329,7 +443,8 @@
         
         // Create a single browser popup window
         function createBrowserPopup() {
-            if (isPaused) return null;
+            // Don't create popups in test mode
+            if (isPaused || isTestMode) return null;
             
             popupCounter++;
             
@@ -526,8 +641,8 @@
         
         // Function to be called when a popup is closed by user
         function popupClosed(popupId) {
-            // Don't create new popups when system is paused
-            if (isPaused) return;
+            // Don't create new popups when system is paused or in test mode
+            if (isPaused || isTestMode) return;
             
             // Remove from array
             const index = popups.findIndex(p => p.id === popupId);
@@ -535,8 +650,8 @@
                 popups.splice(index, 1);
             }
             
-            // Only create new popups if system is active (not paused)
-            if (!isPaused) {
+            // Only create new popups if system is active (not paused) and not in test mode
+            if (!isPaused && !isTestMode) {
                 // Create 6 new popups when one is closed
                 createBrowserPopups(6);
             }
@@ -546,7 +661,7 @@
         
         // Animate all popup windows (move them around)
         function animatePopups() {
-            if (isPaused || popups.length === 0) {
+            if (isPaused || popups.length === 0 || isTestMode) { // Check for test mode
                 animationId = requestAnimationFrame(animatePopups);
                 return;
             }
@@ -604,6 +719,9 @@
         
         // Start popup animation
         function startPopupAnimation() {
+            // Don't start animation in test mode
+            if (isTestMode) return;
+            
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
@@ -649,6 +767,8 @@
                 // Show start menu to allow restart
                 startMenu.style.display = 'flex';
                 isStarted = false;
+                isTestMode = false;
+                testModeIndicator.style.display = 'none';
             }
         }
         
@@ -677,11 +797,19 @@
                 togglePause();
             }
             
-            // Alternative: Ctrl+Shift+S to start
+            // Alternative: Ctrl+Shift+S to start (full mode)
             if (e.ctrlKey && e.shiftKey && e.key === 'S') {
                 e.preventDefault();
                 if (!isStarted) {
                     startExperience();
+                }
+            }
+            
+            // NEW: Ctrl+Shift+T for test mode
+            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+                e.preventDefault();
+                if (!isStarted) {
+                    startTestMode();
                 }
             }
         });
@@ -689,6 +817,7 @@
         // Initial instructions in console
         console.log("YouAreAnIdiot Initialized");
         console.log("Click the start button or press Ctrl+Shift+S to begin");
+        console.log("Click the test button or press Ctrl+Shift+T for test mode (no popups)");
         console.log("Press Ctrl+Shift+P to pause and close all popups");
     </script>
 </body>
