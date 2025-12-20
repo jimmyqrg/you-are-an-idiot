@@ -322,28 +322,119 @@
                                 height: 100%;
                                 object-fit: cover;
                             }
+                            #pause-overlay {
+                                position: fixed;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                background: rgba(0, 0, 0, 0.85);
+                                display: none;
+                                justify-content: center;
+                                align-items: center;
+                                z-index: 1000;
+                                flex-direction: column;
+                                color: white;
+                                font-family: Arial, sans-serif;
+                                text-align: center;
+                            }
+                            #pause-overlay h1 {
+                                font-size: 2rem;
+                                margin-bottom: 10px;
+                            }
                         </style>
                     </head>
                     <body>
+                        <div id="pause-overlay">
+                            <h1>PAUSED</h1>
+                            <p>This popup has been paused by Ctrl+Shift+P</p>
+                        </div>
                         <video id="popup-video" autoplay loop muted playsinline>
                             <source src="video.mp4" type="video/mp4">
                             Your browser does not support the video tag.
                         </video>
                         <script>
-                            // Try to play video
-                            const video = document.getElementById('popup-video');
-                            video.play().catch(e => {
-                                console.log("Video autoplay prevented:", e);
-                                // Mute and try again
-                                video.muted = true;
-                                video.play();
+                            let video = null;
+                            let isPopupPaused = false;
+                            
+                            // Initialize when document is loaded
+                            document.addEventListener('DOMContentLoaded', function() {
+                                video = document.getElementById('popup-video');
+                                const pauseOverlay = document.getElementById('pause-overlay');
+                                
+                                // Try to play video
+                                if (video) {
+                                    video.play().catch(e => {
+                                        console.log("Video autoplay prevented:", e);
+                                        video.muted = true;
+                                        video.play();
+                                    });
+                                }
+                                
+                                // Keyboard shortcut handler for Ctrl+Shift+P
+                                document.addEventListener('keydown', function(e) {
+                                    if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        
+                                        // Toggle pause state for this popup
+                                        isPopupPaused = !isPopupPaused;
+                                        
+                                        if (isPopupPaused) {
+                                            // Pause video
+                                            if (video) {
+                                                video.pause();
+                                            }
+                                            // Show pause overlay
+                                            pauseOverlay.style.display = 'flex';
+                                        } else {
+                                            // Resume video
+                                            if (video) {
+                                                video.play();
+                                            }
+                                            // Hide pause overlay
+                                            pauseOverlay.style.display = 'none';
+                                        }
+                                        
+                                        // Send message to main window
+                                        try {
+                                            if (window.opener && !window.opener.closed) {
+                                                window.opener.handleGlobalPause();
+                                            }
+                                        } catch(err) {
+                                            console.log("Could not communicate with main window:", err);
+                                        }
+                                    }
+                                });
+                                
+                                // Close popup when user tries to close it
+                                window.onbeforeunload = function() {
+                                    try {
+                                        if (window.opener && !window.opener.closed) {
+                                            window.opener.popupClosed("popup-${popupCounter}");
+                                        }
+                                    } catch(err) {
+                                        console.log("Error communicating with main window:", err);
+                                    }
+                                };
                             });
                             
-                            // Close popup when user tries to close it
-                            window.onbeforeunload = function() {
-                                if (window.opener && !window.opener.closed) {
-                                    window.opener.popupClosed("popup-${popupCounter}");
+                            // Function to force pause from main window
+                            window.forcePause = function() {
+                                isPopupPaused = true;
+                                if (video) {
+                                    video.pause();
                                 }
+                                document.getElementById('pause-overlay').style.display = 'flex';
+                            };
+                            
+                            // Function to force resume from main window
+                            window.forceResume = function() {
+                                isPopupPaused = false;
+                                if (video) {
+                                    video.play();
+                                }
+                                document.getElementById('pause-overlay').style.display = 'none';
                             };
                         <\/script>
                     </body>
@@ -369,15 +460,6 @@
                 
                 popups.push(popupData);
                 
-                // Set up unload handler for when user closes the popup
-                try {
-                    popupWindow.onbeforeunload = function() {
-                        popupClosed(`popup-${popupCounter}`);
-                    };
-                } catch(e) {
-                    console.log("Could not set onbeforeunload handler");
-                }
-                
                 return popupData;
                 
             } catch (error) {
@@ -385,6 +467,11 @@
                 return null;
             }
         }
+        
+        // Function to handle global pause from popup windows
+        window.handleGlobalPause = function() {
+            togglePause();
+        };
         
         // Function to be called when a popup is closed by user
         function popupClosed(popupId) {
@@ -484,8 +571,13 @@
                 // Clear interval for creating new popups
                 clearInterval(intervalId);
                 
-                // Close all popup windows
-                closeAllPopups();
+                // Cancel animation
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+                
+                // Force pause all popup windows
+                forcePauseAllPopups();
                 
                 // Show pause overlay
                 pausedOverlay.style.display = 'flex';
@@ -499,10 +591,51 @@
                 // Hide pause overlay
                 pausedOverlay.style.display = 'none';
                 
+                // Force resume all popup windows
+                forceResumeAllPopups();
+                
+                // Restart interval for creating new popups
+                intervalId = setInterval(() => {
+                    if (!isPaused) {
+                        createBrowserPopups(3);
+                    }
+                }, 10000);
+                
+                // Restart animation
+                startPopupAnimation();
+                
                 // Show start menu to allow restart
                 startMenu.style.display = 'flex';
                 isStarted = false;
             }
+        }
+        
+        // Force pause all popup windows
+        function forcePauseAllPopups() {
+            popups.forEach(popup => {
+                try {
+                    if (popup.window && !popup.window.closed) {
+                        // Call the forcePause function in the popup window
+                        popup.window.forcePause();
+                    }
+                } catch (error) {
+                    console.log("Error pausing popup:", error);
+                }
+            });
+        }
+        
+        // Force resume all popup windows
+        function forceResumeAllPopups() {
+            popups.forEach(popup => {
+                try {
+                    if (popup.window && !popup.window.closed) {
+                        // Call the forceResume function in the popup window
+                        popup.window.forceResume();
+                    }
+                } catch (error) {
+                    console.log("Error resuming popup:", error);
+                }
+            });
         }
         
         // Close all popup windows
@@ -522,7 +655,7 @@
             updatePopupCount();
         }
         
-        // Keyboard shortcut handler
+        // Keyboard shortcut handler for main window
         document.addEventListener('keydown', (e) => {
             // Check for Ctrl+Shift+P
             if (e.ctrlKey && e.shiftKey && e.key === 'P') {
