@@ -1,2 +1,2 @@
-You are an idiot<br>
+<h1>You are an idiot</h1><br>
 This is a mock up of the famous web virus《You Are An Idiot》, press Ctrl+Shift+P to stop everything.
