@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> </title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            overflow: hidden;
+            height: 100vh;
+            background: #000;
+            position: relative;
+        }
+        
+        /* Background video styling */
+        #background-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+            filter: brightness(0.7);
+        }
+        
+        /* Start menu styling */
+        #start-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .menu-container {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            padding: 60px 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .menu-container h1 {
+            color: white;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .menu-container p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .shortcut-hint {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 12px 20px;
+            border-radius: 10px;
+            margin-bottom: 40px;
+            display: inline-block;
+            color: white;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        /* Start button styling */
+        #start-button {
+            background: linear-gradient(45deg, #ff0080, #00ccff);
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        #start-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        #start-button:active {
+            transform: translateY(1px);
+        }
+        
+        /* Test mode button styling */
+        #test-button {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+            width: 100%;
+            max-width: 300px;
+            margin-top: 10px;
+        }
+        
+        #test-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+        }
+        
+        #test-button:active {
+            transform: translateY(1px);
+        }
+        
+        /* Button container */
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Control panel */
+        #control-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            z-index: 500;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 250px;
+        }
+        
+        #control-panel h3 {
+            margin-bottom: 8px;
+            color: #00ccff;
+            font-size: 1rem;
+        }
+        
+        #popup-count {
+            font-weight: bold;
+            color: #ff0080;
+            font-size: 1.2rem;
+        }
+        
+        /* Test mode indicator */
+        #test-mode-indicator {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 500;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid #8BC34A;
+        }
+        
+        /* Paused overlay */
+        #paused-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            flex-direction: column;
+        }
+        
+        #paused-overlay h1 {
+            color: white;
+            font-size: 4rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 15px rgba(255, 0, 128, 0.7);
+        }
+        
+        #paused-overlay p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.5rem;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .menu-container {
+                padding: 40px 20px;
+            }
+            
+            .menu-container h1 {
+                font-size: 2rem;
+            }
+            
+            #control-panel {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+            
+            #test-mode-indicator {
+                top: 10px;
+                left: 10px;
+                font-size: 0.9rem;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Background video -->
+    <video id="background-video" loop muted>
+        <source src="//video.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    
+    <!-- Start menu -->
+    <div id="start-menu">
+        <div class="menu-container">
+            <h1><i class="fas fa-play-circle"></i>You Are An Idiot</h1>
+            <p>Please do not click start unless you know what you are doing!</p>
+            
+            <div class="shortcut-hint">
+                <i class="fas fa-keyboard"></i> Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> to pause everything and close all popups
+            </div>
+            
+            <div class="button-container">
+                <button id="start-button">
+                    <i class="fas fa-play"></i> Start
+                </button>
+                
+                <button id="test-button">
+                    <i class="fas fa-vial"></i> Test Mode (No Popups)
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test mode indicator -->
+    <div id="test-mode-indicator">
+        <i class="fas fa-vial"></i> TEST MODE ACTIVE - No Popups
+    </div>
+    
+    <!-- Paused overlay -->
+    <div id="paused-overlay">
+        <h1><i class="fas fa-pause-circle"></i> PAUSED</h1>
+        <p>All popups have been closed and videos paused. Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> again to resume or click the start button to restart.</p>
+    </div>
+    
+    <!-- Control panel -->
+    <div id="control-panel">
+        <h3><i class="fas fa-info-circle"></i> SYSTEM STATUS</h3>
+        <p>Active Popups: <span id="popup-count">0</span></p>
+        <p>Mode: <span id="mode-indicator">Idle</span></p>
+        <p>Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>P</kbd> to pause</p>
+    </div>
+
+    <script>
+        // Global variables
+        let popups = [];
+        let intervalId = null;
+        let popupCounter = 0;
+        let isPaused = false;
+        let isStarted = false;
+        let animationId = null;
+        let isTestMode = false; // NEW: Test mode flag
+        
+        // DOM elements
+        const startMenu = document.getElementById('start-menu');
+        const startButton = document.getElementById('start-button');
+        const testButton = document.getElementById('test-button'); // NEW: Test button
+        const testModeIndicator = document.getElementById('test-mode-indicator'); // NEW: Test indicator
+        const backgroundVideo = document.getElementById('background-video');
+        const popupCountElement = document.getElementById('popup-count');
+        const modeIndicator = document.getElementById('mode-indicator'); // NEW: Mode indicator
+        const pausedOverlay = document.getElementById('paused-overlay');
+        
+        // Start the experience
+        startButton.addEventListener('click', startExperience);
+        
+        // NEW: Start test mode
+        testButton.addEventListener('click', startTestMode);
+        
+        function createBrowserPopup() {
+          if (isPaused) return null;
+          
+          popupCounter++;
+          
+          // Calculate random position
+          const screenWidth = window.screen.availWidth;
+          const screenHeight = window.screen.availHeight;
+          const popupWidth = 400;
+          const popupHeight = 300;
+          
+          const left = Math.floor(Math.random() * (screenWidth - popupWidth));
+          const top = Math.floor(Math.random() * (screenHeight - popupHeight));
+          
+          // Create popup window
+          let popupWindow;
+          try {
+            popupWindow = window.open(
+              '', 
+              `popup-${popupCounter}`, 
+              `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=no,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+            );
+            
+            // ADDED: Check if popup was blocked by the browser
+            if (!popupWindow || popupWindow.closed) {
+              console.warn("Popup was blocked by the browser");
+              
+              // Optionally show an alert to the user about enabling popups
+              if (popupCounter === 1) { // Only show this for the first blocked popup
+                alert(
+                  "Popups are being blocked by your browser.\n\n" +
+                  "To use the full experience:\n" +
+                  "1. Look for a popup blocker icon in your address bar\n" +
+                  "2. Click it and select 'Always allow popups from this site'\n" +
+                  "3. Click the START button again\n\n" +
+                  "You can also use TEST MODE which doesn't require popups."
+                );
+              }
+              return null;
+            }
+            
+            // ... rest of your existing code for writing HTML to popup ...
+          } catch (error) {
+            console.error("Error creating popup:", error);
+            return null;
+          }
+        }
+        
+        // Start test mode function
+        function startTestMode() {
+            if (isStarted) return;
+            
+            isStarted = true;
+            isTestMode = true; // Set test mode flag
+            
+            // Hide start menu
+            startMenu.style.display = 'none';
+            
+            // Show test mode indicator
+            testModeIndicator.style.display = 'block';
+            
+            // Update control panel
+            modeIndicator.textContent = "Test Mode";
+            modeIndicator.style.color = "#4CAF50";
+            
+            // Unmute and play background video with sound
+            backgroundVideo.muted = false;
+            backgroundVideo.play().then(() => {
+                console.log("Test Mode: Background video playing with sound");
+            }).catch(error => {
+                console.log("Test Mode: Sound blocked, falling back to muted:", error);
+                backgroundVideo.muted = true;
+                backgroundVideo.play();
+            });
+            
+            // Don't create any popups in test mode
+            console.log("Test mode active - No popups will be created");
+            
+            // Update popup count
+            updatePopupCount();
+            
+            // No interval needed for test mode
+        }
+        
+        // Start the full experience
+        function startExperience() {
+            if (isStarted) return;
+            
+            isStarted = true;
+            isTestMode = false; // Ensure not in test mode
+            
+            // Hide start menu
+            startMenu.style.display = 'none';
+            
+            // Hide test mode indicator if it was showing
+            testModeIndicator.style.display = 'none';
+            
+            // Update control panel
+            modeIndicator.textContent = "Normal Mode";
+            modeIndicator.style.color = "#00ccff";
+            
+            // Unmute and play background video with sound
+            backgroundVideo.muted = false;
+            backgroundVideo.play().then(() => {
+                console.log("Normal Mode: Background video playing with sound");
+            }).catch(error => {
+                console.log("Normal Mode: Sound blocked, falling back to muted:", error);
+                backgroundVideo.muted = true;
+                backgroundVideo.play();
+            });
+            
+            // Create initial popups (10 to start)
+            createBrowserPopups(10);
+            
+            // Start popup animation
+            startPopupAnimation();
+            
+            // Set up interval to create more popups periodically
+            intervalId = setInterval(() => {
+                if (!isPaused && !isTestMode) { // Check for test mode
+                    createBrowserPopups(3);
+                }
+            }, 10000);
+        }
+        
+        // Create specified number of browser popup windows
+        function createBrowserPopups(count) {
+            // Don't create popups in test mode
+            if (isTestMode) return;
+            
+            for (let i = 0; i < count; i++) {
+                createBrowserPopup();
+            }
+            updatePopupCount();
+        }
+        
+        // Create a single browser popup window
+        function createBrowserPopup() {
+            // Don't create popups in test mode
+            if (isPaused || isTestMode) return null;
+            
+            popupCounter++;
+            
+            // Calculate random position
+            const screenWidth = window.screen.availWidth;
+            const screenHeight = window.screen.availHeight;
+            const popupWidth = 400;
+            const popupHeight = 300;
+            
+            const left = Math.floor(Math.random() * (screenWidth - popupWidth));
+            const top = Math.floor(Math.random() * (screenHeight - popupHeight));
+            
+            // Create popup window
+            let popupWindow;
+            try {
+                popupWindow = window.open(
+                    '', 
+                    `popup-${popupCounter}`, 
+                    `width=${popupWidth},height=${popupHeight},left=${left},top=${top},resizable=no,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+                );
+                
+                if (!popupWindow || popupWindow.closed) {
+                    console.warn("Popup blocked by browser");
+                    return null;
+                }
+                
+                // In the popup HTML generation, update the video initialization:
+            popupWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body {
+                            margin: 0;
+                            padding: 0;
+                            overflow: hidden;
+                            background: black;
+                        }
+                        video {
+                            width: 100%;
+                            height: 100%;
+                            object-fit: cover;
+                        }
+                        #pause-overlay {
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: rgba(0, 0, 0, 0.85);
+                            display: none;
+                                justify-content: center;
+                                align-items: center;
+                                z-index: 1000;
+                                flex-direction: column;
+                                color: white;
+                                font-family: Arial, sans-serif;
+                                text-align: center;
+                            }
+                            #pause-overlay h1 {
+                                font-size: 2rem;
+                                margin-bottom: 10px;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="image.png" style="width:100vw;height:100vh;object-fit:contain">
+                        <div id="pause-overlay">
+                            <h1>PAUSED</h1>
+                            <p>This popup has been paused by Ctrl+Shift+P</p>
+                        </div>
+                        <video id="popup-video" autoplay loop playsinline>
+                            <source src="//video.mp4" type="video/mp4">
+                            Your browser does not support the video tag.
+                        </video>
+                        <script>
+                            let video = null;
+                            let isPopupPaused = false;
+                            
+                            // Initialize when document is loaded
+                            document.addEventListener('DOMContentLoaded', function() {
+                                video = document.getElementById('popup-video');
+                                const pauseOverlay = document.getElementById('pause-overlay');
+                                
+                                // Try to play video with sound first
+                                video.muted = false;
+                                video.play().then(() => {
+                                    console.log("Popup video playing with sound");
+                                }).catch(error => {
+                                    console.log("Popup video sound blocked, playing muted:", error);
+                                    // Fallback to muted
+                                    video.muted = true;
+                                    video.play();
+                                });
+                                
+                                // Keyboard shortcut handler for Ctrl+Shift+P
+                                document.addEventListener('keydown', function(e) {
+                                    if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        
+                                        // Toggle pause state for this popup
+                                        isPopupPaused = !isPopupPaused;
+                                        
+                                        if (isPopupPaused) {
+                                            // Pause video
+                                            if (video) {
+                                                video.pause();
+                                            }
+                                            // Show pause overlay
+                                            pauseOverlay.style.display = 'flex';
+                                        } else {
+                                            // Resume video
+                                            if (video) {
+                                                video.play();
+                                            }
+                                            // Hide pause overlay
+                                            pauseOverlay.style.display = 'none';
+                                        }
+                                        
+                                        // Send message to main window
+                                        try {
+                                            if (window.opener && !window.opener.closed) {
+                                                window.opener.handleGlobalPause();
+                                            }
+                                        } catch(err) {
+                                            console.log("Could not communicate with main window:", err);
+                                        }
+                                    }
+                                });
+                                
+                                // Close popup when user tries to close it
+                                window.onbeforeunload = function() {
+                                    try {
+                                        if (window.opener && !window.opener.closed) {
+                                            window.opener.popupClosed("popup-${popupCounter}");
+                                        }
+                                    } catch(err) {
+                                        console.log("Error communicating with main window:", err);
+                                    }
+                                };
+                            });
+                            
+                            // Function to force pause from main window
+                            window.forcePause = function() {
+                                isPopupPaused = true;
+                                if (video) {
+                                    video.pause();
+                                }
+                                document.getElementById('pause-overlay').style.display = 'flex';
+                            };
+                            
+                            // Function to force resume from main window
+                            window.forceResume = function() {
+                                isPopupPaused = false;
+                                if (video) {
+                                    video.play();
+                                }
+                                document.getElementById('pause-overlay').style.display = 'none';
+                            };
+                        <\/script>
+                    </body>
+                    </html>
+                `);
+                popupWindow.document.close();
+                
+                // Random velocity for movement
+                const velocity = {
+                    x: (Math.random() - 0.5) * 20,
+                    y: (Math.random() - 0.5) * 20
+                };
+                
+                const popupData = {
+                    window: popupWindow,
+                    id: `popup-${popupCounter}`,
+                    velocity: velocity,
+                    width: popupWidth,
+                    height: popupHeight,
+                    left: left,
+                    top: top
+                };
+                
+                popups.push(popupData);
+                
+                return popupData;
+                
+            } catch (error) {
+                console.error("Error creating popup:", error);
+                return null;
+            }
+        }
+        
+        // Function to handle global pause from popup windows
+        window.handleGlobalPause = function() {
+            togglePause();
+        };
+        
+        // Function to be called when a popup is closed by user
+        function popupClosed(popupId) {
+            // Don't create new popups when system is paused or in test mode
+            if (isPaused || isTestMode) return;
+            
+            // Remove from array
+            const index = popups.findIndex(p => p.id === popupId);
+            if (index !== -1) {
+                popups.splice(index, 1);
+            }
+            
+            // Only create new popups if system is active (not paused) and not in test mode
+            if (!isPaused && !isTestMode) {
+                // Create 6 new popups when one is closed
+                createBrowserPopups(6);
+            }
+            
+            updatePopupCount();
+        }
+        
+        // Animate all popup windows (move them around)
+        function animatePopups() {
+            if (isPaused || popups.length === 0 || isTestMode) { // Check for test mode
+                animationId = requestAnimationFrame(animatePopups);
+                return;
+            }
+            
+            popups.forEach(popup => {
+                if (!popup.window || popup.window.closed) {
+                    // Remove closed popups
+                    const index = popups.findIndex(p => p.id === popup.id);
+                    if (index !== -1) {
+                        popups.splice(index, 1);
+                    }
+                    return;
+                }
+                
+                // Update position
+                popup.left += popup.velocity.x;
+                popup.top += popup.velocity.y;
+                
+                // Boundary checks (bounce)
+                const screenWidth = window.screen.availWidth;
+                const screenHeight = window.screen.availHeight;
+                
+                // Check horizontal boundaries
+                if (popup.left <= 0) {
+                    popup.left = 0;
+                    popup.velocity.x = Math.abs(popup.velocity.x);
+                } else if (popup.left + popup.width >= screenWidth) {
+                    popup.left = screenWidth - popup.width;
+                    popup.velocity.x = -Math.abs(popup.velocity.x);
+                }
+                
+                // Check vertical boundaries
+                if (popup.top <= 0) {
+                    popup.top = 0;
+                    popup.velocity.y = Math.abs(popup.velocity.y);
+                } else if (popup.top + popup.height >= screenHeight) {
+                    popup.top = screenHeight - popup.height;
+                    popup.velocity.y = -Math.abs(popup.velocity.y);
+                }
+                
+                // Try to move the window
+                try {
+                    if (!popup.window.closed) {
+                        popup.window.moveTo(Math.floor(popup.left), Math.floor(popup.top));
+                    }
+                } catch (error) {
+                    // Some browsers may block window moving
+                    console.log("Could not move window:", error);
+                }
+            });
+            
+            updatePopupCount();
+            animationId = requestAnimationFrame(animatePopups);
+        }
+        
+        // Start popup animation
+        function startPopupAnimation() {
+            // Don't start animation in test mode
+            if (isTestMode) return;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+            animationId = requestAnimationFrame(animatePopups);
+        }
+        
+        // Update popup count display
+        function updatePopupCount() {
+            popupCountElement.textContent = popups.length;
+        }
+        
+        // Pause/resume everything
+        function togglePause() {
+            isPaused = !isPaused;
+            
+            if (isPaused) {
+                // Pause background video
+                backgroundVideo.pause();
+                
+                // Clear interval for creating new popups
+                clearInterval(intervalId);
+                
+                // Cancel animation
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                }
+                
+                // Close all popup windows when pausing
+                closeAllPopups();
+                
+                // Show pause overlay
+                pausedOverlay.style.display = 'flex';
+                
+                // Update popup count
+                updatePopupCount();
+            } else {
+                // Resume background video
+                backgroundVideo.play();
+                
+                // Hide pause overlay
+                pausedOverlay.style.display = 'none';
+                
+                // Show start menu to allow restart
+                startMenu.style.display = 'flex';
+                isStarted = false;
+                isTestMode = false;
+                testModeIndicator.style.display = 'none';
+            }
+        }
+        
+        // Close all popup windows
+        function closeAllPopups() {
+            popups.forEach(popup => {
+                try {
+                    if (popup.window && !popup.window.closed) {
+                        popup.window.close();
+                    }
+                } catch (error) {
+                    console.log("Error closing popup:", error);
+                }
+            });
+            
+            // Clear the array
+            popups = [];
+            updatePopupCount();
+        }
+        
+        // Keyboard shortcut handler for main window
+        document.addEventListener('keydown', (e) => {
+            // Check for Ctrl+Shift+P
+            if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                togglePause();
+            }
+            
+            // Alternative: Ctrl+Shift+S to start (full mode)
+            if (e.ctrlKey && e.shiftKey && e.key === 'S') {
+                e.preventDefault();
+                if (!isStarted) {
+                    startExperience();
+                }
+            }
+            
+            // NEW: Ctrl+Shift+T for test mode
+            if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+                e.preventDefault();
+                if (!isStarted) {
+                    startTestMode();
+                }
+            }
+        });
+        
+        // Initial instructions in console
+        console.log("YouAreAnIdiot Initialized");
+        console.log("Click the start button or press Ctrl+Shift+S to begin");
+        console.log("Click the test button or press Ctrl+Shift+T for test mode (no popups)");
+        console.log("Press Ctrl+Shift+P to pause and close all popups");
+    </script>
+</body>
+</html>
