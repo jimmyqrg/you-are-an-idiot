@@ -54,10 +54,103 @@
         let isStarted = false;
         let animationId = null;
         let lastMouseY = 0;
+        let isFullscreen = false;
         
         // DOM elements
         const startImage = document.getElementById('start-image');
         const backgroundVideo = document.getElementById('background-video');
+        
+        // Check if this window was opened as a popup
+        const isPopupWindow = window.opener !== null;
+        
+        // Function to enter fullscreen
+        function enterFullscreen() {
+            const elem = document.documentElement;
+            
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(e => {
+                    console.log("Fullscreen request failed:", e);
+                    // Try again after a short delay
+                    setTimeout(enterFullscreen, 100);
+                });
+            } else if (elem.mozRequestFullScreen) { // Firefox
+                elem.mozRequestFullScreen().catch(e => {
+                    console.log("Fullscreen request failed:", e);
+                    setTimeout(enterFullscreen, 100);
+                });
+            } else if (elem.webkitRequestFullscreen) { // Chrome, Safari, Opera
+                elem.webkitRequestFullscreen().catch(e => {
+                    console.log("Fullscreen request failed:", e);
+                    setTimeout(enterFullscreen, 100);
+                });
+            } else if (elem.msRequestFullscreen) { // IE/Edge
+                elem.msRequestFullscreen().catch(e => {
+                    console.log("Fullscreen request failed:", e);
+                    setTimeout(enterFullscreen, 100);
+                });
+            }
+            
+            isFullscreen = true;
+        }
+        
+        // Function to exit fullscreen
+        function exitFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) { // Firefox
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) { // Chrome, Safari, Opera
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { // IE/Edge
+                document.msExitFullscreen();
+            }
+            
+            isFullscreen = false;
+        }
+        
+        // Check if currently in fullscreen
+        function checkFullscreen() {
+            return !!(document.fullscreenElement || 
+                     document.mozFullScreenElement || 
+                     document.webkitFullscreenElement || 
+                     document.msFullscreenElement);
+        }
+        
+        // Listen for fullscreen change events
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('msfullscreenchange', handleFullscreenChange);
+        
+        function handleFullscreenChange() {
+            const fullscreenElement = document.fullscreenElement || 
+                                     document.mozFullScreenElement || 
+                                     document.webkitFullscreenElement || 
+                                     document.msFullscreenElement;
+            
+            isFullscreen = !!fullscreenElement;
+            
+            // If user exits fullscreen, force it back
+            if (!isFullscreen && isStarted) {
+                setTimeout(enterFullscreen, 100);
+            }
+        }
+        
+        // If opened as popup, immediately go fullscreen
+        if (isPopupWindow) {
+            // This is a popup window - load virus.html content and go fullscreen
+            document.addEventListener('DOMContentLoaded', function() {
+                // Enter fullscreen immediately for popups
+                setTimeout(enterFullscreen, 100);
+                
+                // Add fullscreen re-entry on exit
+                setInterval(() => {
+                    if (!checkFullscreen() && isPopupWindow) {
+                        enterFullscreen();
+                    }
+                }, 500);
+            });
+        }
         
         // Start the experience when image is clicked
         startImage.addEventListener('click', startExperience);
@@ -84,6 +177,18 @@
             if (isStarted && (ctrlPressed || cmdPressed)) {
                 window.open('virus.html', '_blank');
             }
+            
+            // Allow F11 for fullscreen (browser default)
+            if (e.key === 'F11') {
+                e.preventDefault();
+            }
+            
+            // Block escape key if we want to prevent exiting fullscreen
+            if (e.key === 'Escape' && isFullscreen && isStarted) {
+                e.preventDefault();
+                // Optionally, you can add code here to show a message
+                // or perform other actions when escape is pressed
+            }
         });
         
         document.addEventListener('keyup', (e) => {
@@ -103,6 +208,9 @@
             backgroundVideo.style.display = 'block';
             backgroundVideo.play();
             
+            // Enter fullscreen
+            enterFullscreen();
+            
             // Start infinite console logging
             startInfiniteLogging();
             
@@ -113,6 +221,13 @@
             
             // Start animation
             startPopupAnimation();
+            
+            // Continuously check and maintain fullscreen
+            setInterval(() => {
+                if (!checkFullscreen() && isStarted) {
+                    enterFullscreen();
+                }
+            }, 1000);
         }
         
         // Create a single browser popup window
@@ -236,6 +351,15 @@
                 cancelAnimationFrame(animationId);
             }
             animationId = requestAnimationFrame(animatePopups);
+        }
+        
+        // Initialize fullscreen check for main window
+        if (!isPopupWindow) {
+            // Check if we should auto-start (for testing)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('autostart')) {
+                setTimeout(startExperience, 1000);
+            }
         }
     </script>
 </body>
